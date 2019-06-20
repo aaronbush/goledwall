@@ -1,0 +1,2 @@
+* TODO when should funcs return *'s vs. values?
+* TODO Does this need to be pointer to Game: 'func (grid *Grid) floodFill(game *Game, square GridSquare)'
