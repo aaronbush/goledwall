@@ -27,8 +27,8 @@ import (
 )
 
 var (
-	StartSentinal    = [6]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
-	LastBinaryOutput time.Time
+	startSentinal        = [6]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+	lastBinaryOutputTime time.Time
 )
 
 type BinaryOutput struct {
@@ -48,13 +48,9 @@ type BinaryOutputSquare struct {
 // paintCmd represents the paint command
 var paintCmd = &cobra.Command{
 	Use:   "paint",
-	Short: "A brief description of your command",
+	Short: "A paint-like UI to draw on an LED wall/display",
 	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+`,
 	RunE: paint,
 }
 
@@ -86,7 +82,7 @@ func paint(cmd *cobra.Command, args []string) error {
 	cols := uint8(20)
 	rows := uint8(36)
 	spacing := int32(20)
-	fps := int32(10)
+	fps := int32(30)
 	logMode := true
 	controlWidth := int32(80)
 	statusHeight := int32(80)
@@ -127,13 +123,13 @@ func (game *Game) Draw() {
 	game.PrimaryScreen.Draw(*game)
 
 	if game.LogMode {
-		if game.PrimaryScreen.Grid.LastModified.After(LastBinaryOutput) {
+		if game.PrimaryScreen.Grid.LastModified.After(lastBinaryOutputTime) {
 			data, err := game.PrimaryScreen.Grid.MarshalBinary()
 			if err != nil {
 				panic(err)
 			}
 			fmt.Printf("%s\n", hex.Dump(data))
-			LastBinaryOutput = time.Now()
+			lastBinaryOutputTime = time.Now()
 		}
 	}
 }
@@ -183,6 +179,9 @@ func (statusArea *StatusArea) Draw(gameContext Game) {
 func (game *Game) handleInput() {
 	if rl.IsKeyPressed(rl.KeyB) {
 		game.FillMode = !game.FillMode
+	}
+	if rl.IsKeyPressed(rl.KeyL) {
+		game.LogMode = !game.LogMode
 	}
 
 	mousePos := rl.GetMousePosition()
@@ -310,11 +309,10 @@ func furthestSquare(row []GridSquare, startingPoint GridSquare, targetColor rl.C
 	return result
 }
 
-// TODO: this will serialize the output
 func (grid *Grid) MarshalBinary() (data []byte, err error) {
 	var binBuf bytes.Buffer
 
-	binOut := BinaryOutput{StartSentinal: StartSentinal, NumLEDs: uint16(grid.NumRows) * uint16(grid.NumColumns)}
+	binOut := BinaryOutput{StartSentinal: startSentinal, NumLEDs: uint16(grid.NumRows) * uint16(grid.NumColumns)}
 	if err := binary.Write(&binBuf, binary.BigEndian, binOut); err != nil {
 		return nil, err
 	}
